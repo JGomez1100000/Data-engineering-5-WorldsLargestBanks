@@ -10,7 +10,7 @@ from datetime import datetime
 url = 'https://web.archive.org/web/20230908091635/https://en.wikipedia.org/wiki/List_of_largest_banks'
 table_attribs = ['Name', 'MC_USD_Billion']
 db_name = 'Banks.db'
-table_name = 'Largest_banks'
+table_name = 'Largest_banks_data'
 csv_path = './Largest_banks_data.csv'
 sql_connection = sqlite3.connect('Largest_banks.db')
 
@@ -37,29 +37,36 @@ def extract(url, table_attribs):
     df = pd.DataFrame(columns=table_attribs)
     tables = data.find_all('tbody')
     rows = tables[0].find_all('tr')
-
-    for row in rows:
+    for row in rows[1:]:
         col = row.find_all('td')
-        if len(col)!=0: # if the column has information:
-            # Here we check if the 2 columns that we are extracting have information, if not,the row will be ignored
-            data_dict = {"Name": col[1].a.contents[0],
-                            "MC_USD_Billion": col[2].contents[0]}
-            df1 = pd.DataFrame(data_dict, index=[0])
-            df = pd.concat([df,df1], ignore_index=True)
-    return df
-'''
-def transform(df, csv_path):
-
+        data_dict = {"Name": col[1].text,
+                    "MC_USD_Billion": float(col[2].text)}
+        df1 = pd.DataFrame(data_dict, index=[0])
+        df = pd.concat([df,df1], ignore_index=True)
+        df['Name'] = df['Name'].str.replace('\n', '')
     return df
 
-def load_to_csv(df, output_path):
-   
 
-def load_to_db(df, sql_connection, table_name):
+def transform(df):
 
+    exchange_rate_df = pd.read_csv(r'C:\Users\Javi\Documents\GitHub\Data-engineering-5-WorldsLargestBanks\exchange_rate.csv')
+    exchange_rate = exchange_rate_df.set_index('Currency').to_dict()['Rate']
+    df['MC_GBP_Billion'] = [np.round(x*exchange_rate['GBP'],2) for x in df['MC_USD_Billion']]
+    df['MC_EUR_Billion'] = [np.round(x*exchange_rate['EUR'],2) for x in df['MC_USD_Billion']]
+    df['MC_INR_Billion'] = [np.round(x*exchange_rate['INR'],2) for x in df['MC_USD_Billion']]
 
-def run_query(query_statement, sql_connection):
+    return df
 
+def load_to_csv(df, csv_path): # transform the df into a csv to be able to load it into the database
+    df.to_csv(csv_path)
+
+def load_to_db(df, sql_connection, table_name): # load csv into the database
+    df.to_sql(table_name, sql_connection, if_exists='replace', index=False)
+
+def run_query(query_statement, sql_connection): # function to read the Queries
+    print(query_statement)
+    query_output = pd.read_sql(query_statement, sql_connection)
+    print(query_output)
 
 
 
@@ -84,13 +91,12 @@ load_to_db(df, sql_connection, table_name)
 
 log_progress('Data loaded to Database as table. Executing queries')
 
-query_statement = f"SELECT * from {table_name} WHERE GDP_USD_billions >= 100"
 
-run_query(query_statement, sql_connection)
+# run_query(query_statement, sql_connection)
 
 log_progress('Process Complete.')
 
 sql_connection.close()
 
 log_progress('Server Connection closed')
-'''
+
