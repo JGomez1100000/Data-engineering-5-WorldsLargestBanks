@@ -12,7 +12,7 @@ table_attribs = ['Name', 'MC_USD_Billion']
 db_name = 'Banks.db'
 table_name = 'Largest_banks_data'
 csv_path = './Largest_banks_data.csv'
-sql_connection = sqlite3.connect('Largest_banks.db')
+sql_connection = sqlite3.connect('Banks.db')
 
 
 # Code for ETL operations on Country-GDP data
@@ -91,8 +91,14 @@ load_to_db(df, sql_connection, table_name)
 
 log_progress('Data loaded to Database as table. Executing queries')
 
+query_statement = f"SELECT * from {table_name}"
+run_query(query_statement, sql_connection)
 
-# run_query(query_statement, sql_connection)
+query_statement = f"SELECT AVG(MC_GBP_Billion) FROM {table_name}"
+run_query(query_statement, sql_connection)
+
+query_statement = f"SELECT Name from {table_name} LIMIT 5"
+run_query(query_statement, sql_connection)
 
 log_progress('Process Complete.')
 
